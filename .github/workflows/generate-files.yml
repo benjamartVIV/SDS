@@ -1,0 +1,35 @@
+name: Generate files.json (SAFE)
+permissions:
+  contents: write 
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Generate files.json
+        run: |
+          find . -type f \
+          ! -path "./.git/*" \
+          ! -path "./.github/*" \
+          ! -name "files.json" \
+          ! -name "index.html" \
+          | sed 's|^\./||' > list.txt
+          jq -R . list.txt | jq -s . > files.json
+      - name: Commit only if changed
+        run: |
+          git config --global user.name "auto-bot"
+          git config --global user.email "auto@bot.com"
+          git add files.json
+          if git diff --cached --quiet; then
+            echo " No changes"
+          else
+            git commit -m "update files.json"
+            git push
+          fi
